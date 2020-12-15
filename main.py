@@ -133,7 +133,7 @@ def find_vertical_lines( img, start_y, end_y, int_image = None ):
     for x1,y1,x2,y2 in vert_lines:
         cv2.rectangle( img, (x1,y1), (x2,y2), (random.randint(20,25) * 10, random.randint(0,5) * 10, random.randint(0,5) * 10 ), -1 )
     cv2.imshow("Find Vertical Lines", img)
-    cv2.waitKey(0)
+    cv2.waitKey(1)
 
     return vert_lines
 
@@ -199,7 +199,7 @@ def threshold_image( img ):
     logger.debug( f'lower_white {lower_white} upper_white {upper_white} ')
     thresh = cv2.inRange( img, lower_white, upper_white )
     cv2.imshow( 'Threshold', thresh )
-    cv2.waitKey(0)
+    cv2.waitKey(1)
     return thresh
 
 def remove_noise( img ):
@@ -212,7 +212,7 @@ def remove_noise( img ):
     img = cv2.erode( img, kernel=np.ones( (5,5), np.uint8 ), iterations=3 )
 
     cv2.imshow("Morphology", img )
-    cv2.waitKey(0)
+    cv2.waitKey(1)
 
     return img
 
@@ -288,13 +288,14 @@ def find_horizontal_lines( img, int_image = None ):
 
     horiz_lines = supress_horizontal_lines( int_image, horiz_lines, border, 0.1 * height )
     logger.debug( f'found horizontal lines {len(horiz_lines)} {type(img)}')
-    if ( height - horiz_lines[-1][3] > 0.2*height ):
+
+    if ( (len(horiz_lines) > 0 ) and ( height - horiz_lines[-1][3] > 0.2*height ) ):
         horiz_lines.append( ( 0, height - 1, width, height ) )
 
     for x1,y1,x2,y2 in horiz_lines:
         cv2.rectangle( img, (x1,y1), (x2,y2), (random.randint(0,5) * 10, random.randint(0,5) * 10, random.randint(0,5) * 10 ), -1 )
     cv2.imshow("Find Horizontal Lines", img)
-    cv2.waitKey(0)
+    cv2.waitKey(1)
 
     return horiz_lines
 
@@ -316,7 +317,7 @@ def xxx_find_lines( img ):
     edges = cv2.Canny( noise, low_threshold, high_threshold)
     #edges = extract_edges( img )
     cv2.imshow( 'Canny Edge Detection', edges )
-    cv2.waitKey( 0 )
+    cv2.waitKey( 1 )
 
     rho = 5  # distance resolution in pixels of the Hough grid
     theta = np.pi / 45  # angular resolution in radians of the Hough grid
@@ -341,7 +342,7 @@ def xxx_find_lines( img ):
     lines_edges = cv2.addWeighted(img, 0.4, line_image, 1, 0)
     print(lines_edges.shape)
     cv2.imshow( 'Sample', lines_edges )
-    cv2.waitKey(0);
+    cv2.waitKey(1);
 
 
 def main( argv = None ):
@@ -365,7 +366,7 @@ def main( argv = None ):
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    main( [ "C:/Users/hphil/Desktop/Lucky Luke 18 - Der singende Draht.cbr", '--templ', 'll_18_p{page}_s{scene}' ] )
+    main( [ "C:/Users/hphil/Desktop/Lucky Luke 18 - Der singende Draht.cbr", '--templ', 'll_18_p{page}_s{scene}.png' ] )
 #    main( [ '--rotate', "-90", "D:/Downloads/BANDE DESSINEE Tintin - Tintin et le Lac aux requins.pdf" ] )
 #    main([ "D:/Downloads/BANDE DESSINEE michel vaillant T15 - Le cirque infernal.pdf"])
 #    main(["D:/Downloads/BANDE DESSINEE Blueberry - 06 - L Homme A L Etoile D Argent.pdf"])
