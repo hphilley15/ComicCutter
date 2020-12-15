@@ -18,7 +18,7 @@ logging.basicConfig()
 logger = logging.getLogger( __name__ )
 logger.setLevel(logging.DEBUG)
 
-def extract_pages( fname, angle = 0.0 ):
+def extract_pages( fname, angle, root_name, out_dir ):
     with tempfile.TemporaryDirectory() as temp_dir:
         logger.debug(f'temp_dir {temp_dir}')
         if ( ( fname[-4:] == '.cbz' ) or ( fname[-4:] == '.cbr' ) ):
@@ -26,7 +26,8 @@ def extract_pages( fname, angle = 0.0 ):
             time.sleep(3)
             logger.debug( f'Starting to process images' )
             #print( 'dir', [ f for f in pathlib.Path( '.' ).rglob( '*.{jpg,png,jpeg,gif,pdf}' ) ] )
-            count = 0
+            page = 0
+
             for fn in pathlib.Path( '.' ).rglob( '*.jpg' ):
                 logger.debug( f'processing image {fn}')
                 img = Image.open( pathlib.Path( '.') / fn )
@@ -38,15 +39,13 @@ def extract_pages( fname, angle = 0.0 ):
                 img = img.resize( (height//4, width//4) )
                 img = cv2.cvtColor( np.array(img), cv2.COLOR_BGR2RGB)
 
-                if ( count > -1 ):
-                    process_image(img)
-                    if (count > 3 + 5 ):
-                        break
-                count = count + 1
+                if ( page > -1 ):
+                    process_image(img, root_name.format(page=page, scene="{scene}"), out_dir)
+                page = page + 1
         elif fname[-4:] == '.pdf':
             images = pdf2image.convert_from_path( fname, output_folder = temp_dir)
             logger.debug( f'extract_pages {fname} loaded {len(images)} images')
-            count = 0
+            page = 0
             for img in images:
                 height, width = img.size
 
@@ -56,25 +55,41 @@ def extract_pages( fname, angle = 0.0 ):
                 img = img.resize( (height//4, width//4) )
                 img = cv2.cvtColor( np.array(img), cv2.COLOR_BGR2RGB)
 
-                if ( count > -1 ):
-                    process_image(img)
-                    if (count > 3 + 5 ):
-                        break
-                count = count + 1
+                if ( page > -1 ):
+                    process_image(img, root_name.format(page=page, slide="{slide}"), out_dir)
+                page = page + 1
 
 
 
-def process_image( img ):
+def process_image( img, templ, out_dir ):
     height, width, depth = img.shape
     int_image = cv2.integral( img )
 
     h_lines = find_horizontal_lines( img, int_image )
+    count = 1
+
     if ( len(h_lines) > 1 ):
         prev = h_lines[0]
+        scene = 1
         for li in range( 1,len(h_lines) ):
             current = h_lines[li]
-            v_lines = find_vertical_lines( img, prev[3], current[1], int_image  )
+            v_lines = find_vertical_lines( img, prev[3], current[1], int_image )
+
+            if ( len(v_lines) > 1 ):
+                prev_x = v_lines[0][2]
+                for vli in range( 1, len(v_lines) ):
+                    vl = v_lines[vli]
+                    x1,y1,x2,y2 = vl
+
+                    crop = Image.fromarray( img[y1:y2, prev_x:x1,::-1] )
+                    crop.save( out_dir / templ.format(scene=scene) )
+
+                    prev_x = x2
+                    scene = scene + 1
+
+
             prev = current
+
 
 def find_vertical_lines( img, start_y, end_y, int_image = None ):
     height, width, depth = img.shape
@@ -118,7 +133,7 @@ def find_vertical_lines( img, start_y, end_y, int_image = None ):
     for x1,y1,x2,y2 in vert_lines:
         cv2.rectangle( img, (x1,y1), (x2,y2), (random.randint(20,25) * 10, random.randint(0,5) * 10, random.randint(0,5) * 10 ), -1 )
     cv2.imshow("Find Vertical Lines", img)
-    cv2.waitKey(5000)
+    cv2.waitKey(500)
 
     return vert_lines
 
@@ -267,16 +282,19 @@ def find_horizontal_lines( img, int_image = None ):
             end_y = y - 1
             if (start_y is not None) and ( ( min_height is None) or ( end_y - start_y > min_height ) ):
                 horiz_lines.append( [ start_x, start_y, end_x, end_y ] )
-                min_height = 1.0 * ( end_y - start_y )
+                min_height = 0.5 * ( end_y - start_y )
                 start_y = None
                 end_y = None
 
     horiz_lines = supress_horizontal_lines( int_image, horiz_lines, border, 0.1 * height )
     logger.debug( f'found horizontal lines {len(horiz_lines)} {type(img)}')
+    if ( height - horiz_lines[-1][3] > 0.2*height ):
+        horiz_lines.append( ( 0, height - 1, width, height ) )
+
     for x1,y1,x2,y2 in horiz_lines:
         cv2.rectangle( img, (x1,y1), (x2,y2), (random.randint(0,5) * 10, random.randint(0,5) * 10, random.randint(0,5) * 10 ), -1 )
     cv2.imshow("Find Horizontal Lines", img)
-    cv2.waitKey(5000)
+    cv2.waitKey(1000)
 
     return horiz_lines
 
@@ -332,18 +350,23 @@ def main( argv = None ):
     parser = argparse.ArgumentParser( description='Extract images from a cbr/cbz file' )
     parser.add_argument( 'files', nargs='+', help='list of comic books (cbr/cbz/pdf)' )
     parser.add_argument( '--rotate', default=0, type=float, help='rotate page by angle angle' )
+    parser.add_argument( '--templ', default="p{page}_{scene}.png")
+    parser.add_argument( '--out_dir', default='./out', help='output_directory' )
 
     args = parser.parse_args( argv )
     args.rotate = args.rotate/180.0 * math.pi
 
+    out_dir = pathlib.Path(args.out_dir)
+    out_dir.mkdir(exist_ok=True, parents=True)
+
     for fn in args.files:
         print( f'Processing files {fn} {args.rotate/math.pi * 180.0}' )
-        extract_pages( fn, args.rotate )
+        extract_pages( fn, args.rotate, args.templ, out_dir )
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-#    main( [ "C:/Users/hphil/Desktop/Lucky Luke 18 - Der singende Draht.cbr" ] )
-    main( [ '--rotate', "-90", "D:/Downloads/BANDE DESSINEE Tintin - Tintin et le Lac aux requins.pdf" ] )
+    main( [ "C:/Users/hphil/Desktop/Lucky Luke 18 - Der singende Draht.cbr" ] )
+#    main( [ '--rotate', "-90", "D:/Downloads/BANDE DESSINEE Tintin - Tintin et le Lac aux requins.pdf" ] )
 #    main([ "D:/Downloads/BANDE DESSINEE michel vaillant T15 - Le cirque infernal.pdf"])
 #    main(["D:/Downloads/BANDE DESSINEE Blueberry - 06 - L Homme A L Etoile D Argent.pdf"])
 
