@@ -56,7 +56,7 @@ def extract_pages( fname, angle, root_name, out_dir ):
                 img = cv2.cvtColor( np.array(img), cv2.COLOR_BGR2RGB)
 
                 if ( page > -1 ):
-                    process_image(img, root_name.format(page=page, slide="{slide}"), out_dir)
+                    process_image(img, root_name.format(page=page, scene="{scene}"), out_dir)
                 page = page + 1
 
 
@@ -351,7 +351,7 @@ def main( argv = None ):
     parser = argparse.ArgumentParser( description='Extract images from a cbr/cbz file' )
     parser.add_argument( 'files', nargs='+', help='list of comic books (cbr/cbz/pdf)' )
     parser.add_argument( '--rotate', default=0, type=float, help='rotate page by angle angle' )
-    parser.add_argument( '--templ', default="p{page}_{scene}.png")
+    parser.add_argument( '--template', default="p{page}_{scene}.png")
     parser.add_argument( '--out_dir', default='./out', help='output_directory' )
 
     args = parser.parse_args( argv )
@@ -362,13 +362,13 @@ def main( argv = None ):
 
     for fn in args.files:
         print( f'Processing files {fn} {args.rotate/math.pi * 180.0}' )
-        extract_pages( fn, args.rotate, args.templ, out_dir )
+        extract_pages( fn, args.rotate, args.template, out_dir )
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    main( [ "C:/Users/hphil/Desktop/Lucky Luke 18 - Der singende Draht.cbr", '--templ', 'll_18_p{page}_s{scene}.png' ] )
+#    main( [ "C:/Users/hphil/Desktop/Lucky Luke 18 - Der singende Draht.cbr", '--template', 'll_18_p{page}_s{scene}.png' ] )
 #    main( [ '--rotate', "-90", "D:/Downloads/BANDE DESSINEE Tintin - Tintin et le Lac aux requins.pdf" ] )
-#    main([ "D:/Downloads/BANDE DESSINEE michel vaillant T15 - Le cirque infernal.pdf"])
+    main([ "D:/Downloads/BANDE DESSINEE michel vaillant T15 - Le cirque infernal.pdf", '--template', 'mv_15_[{page}_s{scene}.png', '--out_dir', './out'] )
 #    main(["D:/Downloads/BANDE DESSINEE Blueberry - 06 - L Homme A L Etoile D Argent.pdf"])
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
