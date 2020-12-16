@@ -18,7 +18,7 @@ logging.basicConfig()
 logger = logging.getLogger( __name__ )
 logger.setLevel(logging.DEBUG)
 
-def extract_pages( fname, angle, root_name, out_dir ):
+def extract_pages( fname, angle, root_name, out_dir, scale ):
     with tempfile.TemporaryDirectory() as temp_dir:
         logger.debug(f'temp_dir {temp_dir}')
         if ( ( fname[-4:] == '.cbz' ) or ( fname[-4:] == '.cbr' ) ):
@@ -36,7 +36,7 @@ def extract_pages( fname, angle, root_name, out_dir ):
                 if angle != 0.0:
                     img = img.rotate( angle/math.pi * 180.0 )
 
-                img = img.resize( (height//4, width//4) )
+                img = img.resize( (height//scale, width//scale) )
                 img = cv2.cvtColor( np.array(img), cv2.COLOR_BGR2RGB)
 
                 if ( page > -1 ):
@@ -52,7 +52,7 @@ def extract_pages( fname, angle, root_name, out_dir ):
                 if angle != 0.0:
                     img = img.rotate( angle/math.pi * 180.0 )
 
-                img = img.resize( (height//4, width//4) )
+                img = img.resize( (height//scale, width//scale) )
                 img = cv2.cvtColor( np.array(img), cv2.COLOR_BGR2RGB)
 
                 if ( page > -1 ):
@@ -353,6 +353,7 @@ def main( argv = None ):
     parser.add_argument( '--rotate', default=0, type=float, help='rotate page by angle angle' )
     parser.add_argument( '--template', default="p{page}_{scene}.png")
     parser.add_argument( '--out_dir', default='./out', help='output_directory' )
+    parser.add_argument( '--scale', default = 1, type=int, help='Divide image by this factor' )
 
     args = parser.parse_args( argv )
     args.rotate = args.rotate/180.0 * math.pi
@@ -362,13 +363,15 @@ def main( argv = None ):
 
     for fn in args.files:
         print( f'Processing files {fn} {args.rotate/math.pi * 180.0}' )
-        extract_pages( fn, args.rotate, args.template, out_dir )
+        extract_pages( fn, args.rotate, args.template, out_dir, args.scale )
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
+#    main( [ "/home/abthil023/Downloads/BANDE DESSINEE Lucky Luke 16 - En remonttant le Mississipi.pdf", '--template', 'll_16_p{page}_s{scene}.png' ] )
+    main( [ "/home/abthil023/Downloads/BANDE DESSINEE Mayam 01 - La Delegation Terrienne.pdf", '--template', 'm_1_p{page}_s{scene}.png' ] )
 #    main( [ "C:/Users/hphil/Desktop/Lucky Luke 18 - Der singende Draht.cbr", '--template', 'll_18_p{page}_s{scene}.png' ] )
 #    main( [ '--rotate', "-90", "D:/Downloads/BANDE DESSINEE Tintin - Tintin et le Lac aux requins.pdf" ] )
-    main([ "D:/Downloads/BANDE DESSINEE michel vaillant T15 - Le cirque infernal.pdf", '--template', 'mv_15_[{page}_s{scene}.png', '--out_dir', './out'] )
+#    main([ "D:/Downloads/BANDE DESSINEE michel vaillant T15 - Le cirque infernal.pdf", '--template', 'mv_15_[{page}_s{scene}.png', '--out_dir', './out'] )
 #    main(["D:/Downloads/BANDE DESSINEE Blueberry - 06 - L Homme A L Etoile D Argent.pdf"])
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
